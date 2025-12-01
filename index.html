@@ -2,13 +2,18 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Ice Planner </title>
+    <title>Ice Planner</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <script type="importmap">
       { "imports": { "lit": "https://cdn.jsdelivr.net/npm/lit@3/+esm" } }
     </script>
+    <!-- Load all components -->
     <script type="module" src="./src/app-number-input.js"></script>
-    <script type="module" src="./src/ice.planner.js"></script>
+    <script type="module" src="./src/app-page-wrapper.js"></script>
+    <script type="module" src="./src/pages/page-calculator.js"></script>
+    <script type="module" src="./src/pages/page-summary.js"></script>
+    <script type="module" src="./src/pages/page-settings.js"></script>
+    <script type="module" src="./src/ice-planner.js"></script>
     <style>
       :root { color-scheme: light dark; }
       body {
@@ -29,46 +34,11 @@
         }
       }
       main { max-width: 1024px; margin: 0 auto; display: grid; gap: 18px; }
-      header.page {
-        display: flex; justify-content: space-between; align-items: center; gap: 12px;
-      }
-      .brand {
-        display: flex; align-items: baseline; gap: 10px;
-      }
-      .brand h1 {
-        margin: 0;
-        font: 800 1.6rem/1.1 system-ui, Arial, sans-serif;
-        color: var(--ddd-theme-default-wonderPurple, #5632e6);
-      }
-      .brand span {
-        color: #60a5fa; font-weight: 600; letter-spacing: .2px;
-      }
-      .bar {
-        height: 2px;
-        background: linear-gradient(90deg, #60a5fa, #a78bfa, #f472b6);
-        border-radius: 2px;
-        opacity: .6;
-      }
-      .note {
-        color: #9fb0c6; font-size: .95rem; margin: 4px 0 0;
-      }
-      @media (prefers-color-scheme: light) { .note { color: #495569; } }
-      section.app { display: grid; gap: 14px; }
     </style>
   </head>
   <body>
     <main>
-      <header class="page">
-        <div class="brand">
-          <h1>Ice Planner</h1>
-          <span></span>
-        </div>
-      </header>
-      <div class="bar"></div>
-      <p class="note">Update team and costs, totals and per‑player update instantly. Use “Copy sharable URL” to share the exact worksheet.</p>
-      <section class="app">
-        <ice-planner></ice-planner>
-      </section>
+      <ice-planner></ice-planner>
     </main>
   </body>
 </html>
