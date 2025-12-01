@@ -5,15 +5,13 @@
     <title>Ice Planner</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <script type="importmap">
-      { "imports": { "lit": "https://cdn.jsdelivr.net/npm/lit@3/+esm" } }
+      {
+        "imports": {
+          "lit": "https://cdn.jsdelivr.net/npm/lit@3/+esm",
+          "./src/": "./"
+        }
+      }
     </script>
-    <!-- Load all components -->
-    <script type="module" src="./src/app-number-input.js"></script>
-    <script type="module" src="./src/app-page-wrapper.js"></script>
-    <script type="module" src="./src/pages/page-calculator.js"></script>
-    <script type="module" src="./src/pages/page-summary.js"></script>
-    <script type="module" src="./src/pages/page-settings.js"></script>
-    <script type="module" src="./src/ice-planner.js"></script>
     <style>
       :root { color-scheme: light dark; }
       body {
@@ -40,5 +38,306 @@
     <main>
       <ice-planner></ice-planner>
     </main>
+    
+    <script type="module">
+      import { LitElement, html, css } from 'lit';
+      
+      // app-number-input
+      class AppNumberInput extends LitElement {
+        static get properties() {
+          return { label:{type:String}, value:{type:Number}, min:{type:Number}, max:{type:Number}, step:{type:Number}, suffix:{type:String} };
+        }
+        constructor() {
+          super();
+          this.label=''; this.value=0; this.min=0; this.max=1_000_000; this.step=1; this.suffix='';
+        }
+        static get styles() {
+          return css`
+            :host { display:block; }
+            .field { display:grid; gap:6px; }
+            label {
+              font: 600 .95rem/1.2 system-ui, Arial, sans-serif;
+              color: var(--ddd-theme-default-wonderPurple, #5632e6);
+            }
+            .wrap {
+              display:flex; align-items:center; gap:8px;
+              background: var(--app-input-bg, #0e1529);
+              border: 1px solid var(--app-input-border, #263449);
+              border-radius: 12px; padding: 10px 12px;
+              transition: border-color .15s ease;
+            }
+            input[type="number"] {
+              width:100%; border:none; outline:none; font-size:1rem; background:transparent;
+              color: var(--app-input-fg, #dbeafe);
+            }
+            .wrap:focus-within { border-color: #60a5fa; }
+            .suffix { color:#93a3b8; font-size:.9rem; }
+            @media (prefers-color-scheme: light) {
+              .wrap{ background:#fff; border-color:#cbd5e1; }
+              input[type="number"]{ color:#0b1c5b; }
+              .suffix{ color:#475569; }
+            }
+          `;
+        }
+        _onInput(e) {
+          const v = Number(e.target.value);
+          this.value = Number.isFinite(v) ? v : 0;
+          this.dispatchEvent(new CustomEvent('value-changed', { detail: { value: this.value } }));
+        }
+        render() {
+          return html`
+            <div class="field">
+              ${this.label ? html`<label>${this.label}</label>` : html``}
+              <div class="wrap">
+                <input type="number"
+                  .value=${String(this.value)}
+                  min=${this.min}
+                  max=${this.max}
+                  step=${this.step}
+                  @input=${this._onInput} />
+                ${this.suffix ? html`<span class="suffix">${this.suffix}</span>` : html``}
+              </div>
+            </div>
+          `;
+        }
+      }
+      customElements.define('app-number-input', AppNumberInput);
+
+      // app-page-wrapper
+      class AppPageWrapper extends LitElement {
+        static get properties() {
+          return { title: { type: String }, showNav: { type: Boolean } };
+        }
+        constructor() {
+          super();
+          this.title = 'Page';
+          this.showNav = true;
+        }
+        _navigateTo(page) {
+          const sp = new URLSearchParams(window.location.search);
+          sp.set('page', page);
+          window.history.replaceState({}, '', `${location.pathname}?${sp.toString()}`);
+          window.dispatchEvent(new CustomEvent('page-changed'));
+        }
+        static get styles() {
+          return css`
+            :host { display: block; --card: #0e1529; --fg: #dbeafe; --muted: #93a3b8; --ring: #263449; --accent: #7c5dff; }
+            @media (prefers-color-scheme: light) {
+              :host { --card: #ffffff; --fg: #0b1c5b; --muted: #475569; --ring: #cbd5e1; }
+            }
+            .page-wrapper { background: var(--card); color: var(--fg); border: 1px solid var(--ring); border-radius: 16px; overflow: hidden; }
+            .page-header { background: linear-gradient(90deg, rgba(96, 165, 250, 0.1), rgba(167, 139, 250, 0.1)); border-bottom: 1px solid var(--ring); padding: 16px 18px; display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+            h2 { margin: 0; font: 800 1.2rem/1.1 system-ui, Arial, sans-serif; color: var(--accent); }
+            .page-nav { display: flex; gap: 8px; flex-wrap: wrap; }
+            .nav-btn { padding: 6px 12px; border-radius: 8px; border: 1px solid var(--ring); background: transparent; color: var(--fg); cursor: pointer; font-size: 0.9rem; font-weight: 500; transition: all 0.15s ease; }
+            .nav-btn:hover { background: rgba(96, 165, 250, 0.1); border-color: #60a5fa; }
+            .nav-btn.active { background: #60a5fa; color: #fff; border-color: #60a5fa; }
+            .page-body { padding: 18px; display: grid; gap: 14px; }
+            .page-footer { border-top: 1px dashed var(--ring); padding: 12px 18px; text-align: center; color: var(--muted); font-size: 0.85rem; }
+          `;
+        }
+        render() {
+          return html`
+            <div class="page-wrapper">
+              ${this.showNav ? html`<div class="page-header"><h2>${this.title}</h2><div class="page-nav"><button class="nav-btn active" @click=${() => this._navigateTo('calculator')}>Calculator</button><button class="nav-btn" @click=${() => this._navigateTo('summary')}>Summary</button><button class="nav-btn" @click=${() => this._navigateTo('settings')}>Settings</button></div></div>` : html``}
+              <div class="page-body"><slot></slot></div>
+              <div class="page-footer">Ice Planner v2 • Multiple Pages • Responsive Design</div>
+            </div>
+          `;
+        }
+      }
+      customElements.define('app-page-wrapper', AppPageWrapper);
+
+      // page-calculator
+      class PageCalculator extends LitElement {
+        static get properties() {
+          return { teamName:{type:String}, logo:{type:String}, iceCost:{type:Number}, hours:{type:Number}, coachCost:{type:Number}, jerseyCost:{type:Number}, players:{type:Number} };
+        }
+        constructor() {
+          super();
+          this.teamName=''; this.logo=''; this.iceCost=0; this.hours=0; this.coachCost=0; this.jerseyCost=0; this.players=1;
+        }
+        _emitChange(e,f) { this.dispatchEvent(new CustomEvent(f, { detail: e.detail?.value ?? 0 })); }
+        _handleTeamChange(e) { this.dispatchEvent(new CustomEvent('team-changed', { detail: e.target.value })); }
+        _handleLogoChange(e) { this.dispatchEvent(new CustomEvent('logo-changed', { detail: e.target.value })); }
+        static get styles() {
+          return css`
+            :host { --card:#0e1529; --fg:#dbeafe; --muted:#93a3b8; --ring:#263449; --accent:#7c5dff; }
+            @media (prefers-color-scheme:light) { :host { --card:#fff; --fg:#0b1c5b; --muted:#475569; --ring:#cbd5e1; } }
+            .top { display:grid; gap:10px; grid-template-columns:minmax(220px,1fr) minmax(200px,1fr); align-items:center; }
+            .title { display:flex; align-items:center; gap:10px; }
+            h2 { margin:0; font:800 1.2rem/1.1 system-ui,Arial,sans-serif; color:var(--accent); }
+            .row { display:flex; gap:10px; }
+            .pill { flex:1; min-width:140px; display:flex; gap:8px; align-items:center; background:rgba(96,165,250,0.07); border:1px solid var(--ring); border-radius:999px; padding:8px 12px; }
+            .pill input { flex:1; border:none; outline:none; background:transparent; color:var(--fg); }
+            img.logo { height:42px; width:42px; border-radius:50%; object-fit:cover; border:1px solid var(--ring); }
+            .grid { display:grid; gap:14px; grid-template-columns:repeat(2,minmax(220px,1fr)); }
+            @media (max-width:720px) { .grid { grid-template-columns:1fr; } .top { grid-template-columns:1fr; } }
+            .totals { display:grid; gap:8px; border-top:1px dashed var(--ring); padding-top:12px; }
+            .pair { display:flex; justify-content:space-between; }
+            .muted { color:var(--muted); }
+            .strong { font-weight:800; }
+            .cta { margin-top:8px; display:flex; gap:8px; flex-wrap:wrap; }
+            button.btn { background:linear-gradient(90deg,#60a5fa,#a78bfa); color:#fff; border:none; border-radius:12px; padding:10px 14px; cursor:pointer; }
+          `;
+        }
+        render() {
+          return html`<app-page-wrapper .title=${"Calculator"} .showNav=${true}><div class="top"><div class="title">${this.logo?html`<img class="logo" src="${this.logo}" alt="logo" />`:html``}<h2>Ice Planner</h2></div><div class="row"><div class="pill"><span class="muted">Team</span><input type="text" .value=${this.teamName} @input=${this._handleTeamChange} /></div><div class="pill"><span class="muted">Logo URL</span><input type="text" .value=${this.logo} @input=${this._handleLogoChange} /></div></div></div><div class="grid"><app-number-input label="Ice cost ($/hour)" .value=${this.iceCost} .min=${0} .step=${1} suffix="$" @value-changed=${(e)=>this._emitChange(e,'ice-changed')}></app-number-input><app-number-input label="Hours" .value=${this.hours} .min=${0} .step=${1} @value-changed=${(e)=>this._emitChange(e,'hours-changed')}></app-number-input><app-number-input label="Coaches ($)" .value=${this.coachCost} .min=${0} .step=${1} suffix="$" @value-changed=${(e)=>this._emitChange(e,'coach-changed')}></app-number-input><app-number-input label="Jerseys ($)" .value=${this.jerseyCost} .min=${0} .step=${1} suffix="$" @value-changed=${(e)=>this._emitChange(e,'jersey-changed')}></app-number-input><app-number-input label="Players" .value=${this.players} .min=${1} .step=${1} @value-changed=${(e)=>this._emitChange(e,'players-changed')}></app-number-input></div></app-page-wrapper>`;
+        }
+      }
+      customElements.define('page-calculator', PageCalculator);
+
+      // page-summary
+      class PageSummary extends LitElement {
+        static get properties() {
+          return { teamName:{type:String}, logo:{type:String}, totalBase:{type:Number}, totalWithFees:{type:Number}, perPlayer:{type:Number}, players:{type:Number}, iceCost:{type:Number}, hours:{type:Number}, coachCost:{type:Number}, jerseyCost:{type:Number} };
+        }
+        constructor() {
+          super();
+          this.teamName=''; this.logo=''; this.totalBase=0; this.totalWithFees=0; this.perPlayer=0; this.players=1; this.iceCost=0; this.hours=0; this.coachCost=0; this.jerseyCost=0;
+        }
+        _calcIceTotal() { return Number((this.iceCost*this.hours).toFixed(2)); }
+        _calcJerseyTotal() { return Number((this.jerseyCost*this.players).toFixed(2)); }
+        _calcFees() { return Number((this.totalWithFees-this.totalBase).toFixed(2)); }
+        _calcPerPlayerBreakdown(c) {
+          const b = {ice:(this.iceCost*this.hours)/Math.max(1,this.players), coach:this.coachCost/Math.max(1,this.players), jersey:this.jerseyCost, fees:this._calcFees()/Math.max(1,this.players)};
+          return Number((b[c]||0).toFixed(2));
+        }
+        static get styles() {
+          return css`
+            :host { --card:#0e1529; --fg:#dbeafe; --muted:#93a3b8; --ring:#263449; --accent:#7c5dff; }
+            @media (prefers-color-scheme:light) { :host { --card:#fff; --fg:#0b1c5b; --muted:#475569; --ring:#cbd5e1; } }
+            .header { display:flex; align-items:center; gap:12px; }
+            img.logo { height:48px; width:48px; border-radius:50%; object-fit:cover; border:1px solid var(--ring); }
+            .team-info h3 { margin:0 0 4px 0; color:var(--accent); }
+            .team-info p { margin:0; font-size:0.9rem; color:var(--muted); }
+            .stat-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; }
+            .stat-card { background:rgba(96,165,250,0.08); border:1px solid var(--ring); border-radius:12px; padding:12px; text-align:center; }
+            .stat-label { font-size:0.85rem; color:var(--muted); margin-bottom:6px; }
+            .stat-value { font-size:1.4rem; font-weight:800; color:var(--accent); }
+            .breakdown { background:rgba(96,165,250,0.06); border:1px solid var(--ring); border-radius:12px; padding:14px; }
+            .breakdown h4 { margin:0 0 10px 0; color:var(--accent); font-size:0.95rem; }
+            .breakdown-row { display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px dashed var(--ring); }
+            .breakdown-row:last-child { border-bottom:none; }
+            .breakdown-label { color:var(--muted); font-size:0.9rem; }
+            .breakdown-value { font-weight:600; color:var(--fg); }
+            .breakdown-value.total { color:var(--accent); font-weight:800; font-size:1.05rem; }
+          `;
+        }
+        render() {
+          return html`<app-page-wrapper .title=${"Summary"} .showNav=${true}><div class="header">${this.logo?html`<img class="logo" src="${this.logo}" alt="logo" />`:html`<div style="width:48px;height:48px;border-radius:50%;border:1px solid var(--ring);background:rgba(96,165,250,0.1);"></div>`}<div class="team-info"><h3>${this.teamName||'Team'}</h3><p>${this.players} player${this.players!==1?'s':''}</p></div></div><div class="stat-grid"><div class="stat-card"><div class="stat-label">Base Total</div><div class="stat-value">$${this.totalBase}</div></div><div class="stat-card"><div class="stat-label">Fees</div><div class="stat-value">$${this._calcFees()}</div></div><div class="stat-card"><div class="stat-label">Total</div><div class="stat-value">$${this.totalWithFees}</div></div><div class="stat-card"><div class="stat-label">Per Player</div><div class="stat-value">$${this.perPlayer}</div></div></div><div class="breakdown"><h4>Cost Breakdown (Total)</h4><div class="breakdown-row"><span class="breakdown-label">Ice Time (${this.hours}h @ $${this.iceCost}/h)</span><span class="breakdown-value">$${this._calcIceTotal()}</span></div><div class="breakdown-row"><span class="breakdown-label">Coaches</span><span class="breakdown-value">$${this.coachCost}</span></div><div class="breakdown-row"><span class="breakdown-label">Jerseys (${this.players} @ $${this.jerseyCost} each)</span><span class="breakdown-value">$${this._calcJerseyTotal()}</span></div><div class="breakdown-row"><span class="breakdown-label">Subtotal</span><span class="breakdown-value">$${this.totalBase}</span></div><div class="breakdown-row"><span class="breakdown-label">Fees</span><span class="breakdown-value">$${this._calcFees()}</span></div><div class="breakdown-row"><span class="breakdown-label">Total</span><span class="breakdown-value total">$${this.totalWithFees}</span></div></div><div class="breakdown"><h4>Per-Player Breakdown</h4><div class="breakdown-row"><span class="breakdown-label">Ice Time Share</span><span class="breakdown-value">$${this._calcPerPlayerBreakdown('ice').toFixed(2)}</span></div><div class="breakdown-row"><span class="breakdown-label">Coach Share</span><span class="breakdown-value">$${this._calcPerPlayerBreakdown('coach').toFixed(2)}</span></div><div class="breakdown-row"><span class="breakdown-label">Jersey</span><span class="breakdown-value">$${this._calcPerPlayerBreakdown('jersey').toFixed(2)}</span></div><div class="breakdown-row"><span class="breakdown-label">Fee Share</span><span class="breakdown-value">$${this._calcPerPlayerBreakdown('fees').toFixed(2)}</span></div><div class="breakdown-row"><span class="breakdown-label">Total Per Player</span><span class="breakdown-value total">$${this.perPlayer}</span></div></div></app-page-wrapper>`;
+        }
+      }
+      customElements.define('page-summary', PageSummary);
+
+      // page-settings
+      class PageSettings extends LitElement {
+        static get properties() {
+          return { teamName:{type:String}, logo:{type:String}, feePct:{type:Number}, feeFixed:{type:Number} };
+        }
+        constructor() {
+          super();
+          this.teamName=''; this.logo=''; this.feePct=0.02; this.feeFixed=0.99;
+        }
+        _handleTeamChange(e) { this.dispatchEvent(new CustomEvent('team-changed', { detail: e.target.value })); }
+        _handleLogoChange(e) { this.dispatchEvent(new CustomEvent('logo-changed', { detail: e.target.value })); }
+        _emitChange(e,f) { this.dispatchEvent(new CustomEvent(f, { detail: e.detail?.value ?? 0 })); }
+        static get styles() {
+          return css`
+            :host { --card:#0e1529; --fg:#dbeafe; --muted:#93a3b8; --ring:#263449; --accent:#7c5dff; }
+            @media (prefers-color-scheme:light) { :host { --card:#fff; --fg:#0b1c5b; --muted:#475569; --ring:#cbd5e1; } }
+            .section { background:rgba(96,165,250,0.06); border:1px solid var(--ring); border-radius:12px; padding:14px; }
+            .section h3 { margin:0 0 12px 0; color:var(--accent); font-size:1rem; }
+            .form-group { margin-bottom:16px; }
+            .form-group:last-child { margin-bottom:0; }
+            label { display:block; margin-bottom:6px; font-weight:600; font-size:0.9rem; color:var(--fg); }
+            .pill { display:flex; gap:8px; align-items:center; background:rgba(96,165,250,0.07); border:1px solid var(--ring); border-radius:999px; padding:8px 12px; }
+            .pill input { flex:1; border:none; outline:none; background:transparent; color:var(--fg); font:inherit; }
+            .pill input::placeholder { color:var(--muted); }
+            .description { font-size:0.85rem; color:var(--muted); margin-top:4px; }
+            .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:14px; }
+            .example { background:rgba(96,165,250,0.04); border-left:3px solid var(--accent); border-radius:4px; padding:10px 12px; margin-top:8px; font-size:0.85rem; color:var(--muted); }
+            .example strong { color:var(--fg); }
+          `;
+        }
+        render() {
+          return html`<app-page-wrapper .title=${"Settings"} .showNav=${true}><div class="section"><h3>Team Information</h3><div class="form-group"><label for="team-name">Team Name</label><div class="pill"><input id="team-name" type="text" .value=${this.teamName} @input=${this._handleTeamChange} placeholder="Enter team name" /></div></div><div class="form-group"><label for="logo-url">Logo URL</label><div class="pill"><input id="logo-url" type="url" .value=${this.logo} @input=${this._handleLogoChange} placeholder="https://example.com/logo.png" /></div><div class="description">Logo will appear at 42×42px</div></div></div><div class="section"><h3>Fee Configuration</h3><div class="grid"><div class="form-group"><app-number-input label="Fee %" .value=${this.feePct} .min=${0} .step=${0.005} @value-changed=${(e)=>this._emitChange(e,'fee-pct-changed')}></app-number-input><div class="example"><strong>${this.feePct.toFixed(3)}</strong> = ${(this.feePct*100).toFixed(1)}%</div></div><div class="form-group"><app-number-input label="Fixed Fee" .value=${this.feeFixed} .min=${0} .step=${0.5} suffix="$" @value-changed=${(e)=>this._emitChange(e,'fee-fixed-changed')}></app-number-input><div class="example">Flat <strong>$${this.feeFixed.toFixed(2)}</strong></div></div></div></div></app-page-wrapper>`;
+        }
+      }
+      customElements.define('page-settings', PageSettings);
+
+      // ice-planner (main)
+      class IcePlanner extends LitElement {
+        static get properties() {
+          return { currentPage:{type:String}, teamName:{type:String}, logo:{type:String}, iceCost:{type:Number}, hours:{type:Number}, feePct:{type:Number}, feeFixed:{type:Number}, coachCost:{type:Number}, jerseyCost:{type:Number}, players:{type:Number}, totalBase:{type:Number}, totalWithFees:{type:Number}, perPlayer:{type:Number} };
+        }
+        constructor() {
+          super();
+          this.currentPage='calculator'; this.teamName='Penn State Champs'; this.logo=''; this.iceCost=300; this.hours=50; this.feePct=0.02; this.feeFixed=0.99; this.coachCost=3000; this.jerseyCost=88; this.players=1; this.totalBase=0; this.totalWithFees=0; this.perPlayer=0;
+          this._storageKey='ice-planner-v1'; this._fromURLOnce=false;
+          this._recalc();
+        }
+        firstUpdated() { this._loadFromURL(); this._loadFromStorage(); this._initRouting(); }
+        updated(c) {
+          const w=['iceCost','hours','feePct','feeFixed','coachCost','jerseyCost','players'];
+          if(w.some(k=>c.has(k))) { this._recalc(); this._saveToStorage(); this._writeToURL(); }
+        }
+        _initRouting() { window.addEventListener('page-changed',()=>this._readPageFromURL()); }
+        _readPageFromURL() {
+          const sp=new URLSearchParams(window.location.search);
+          const page=sp.get('page')||'calculator';
+          if(page!==this.currentPage) this.currentPage=page;
+        }
+        _loadFromStorage() {
+          try {
+            const raw=localStorage.getItem(this._storageKey);
+            if(raw) { Object.assign(this,JSON.parse(raw)); this._recalc(); }
+          } catch(e) {}
+        }
+        _saveToStorage() {
+          try {
+            const data={teamName:this.teamName,logo:this.logo,iceCost:this.iceCost,hours:this.hours,feePct:this.feePct,feeFixed:this.feeFixed,coachCost:this.coachCost,jerseyCost:this.jerseyCost,players:this.players};
+            localStorage.setItem(this._storageKey,JSON.stringify(data));
+          } catch(e) {}
+        }
+        _loadFromURL() {
+          if(this._fromURLOnce) return;
+          const sp=new URLSearchParams(window.location.search);
+          const N=(k,d)=>{const n=Number(sp.get(k)); return Number.isFinite(n)?n:d;};
+          const S=(k,d)=>{const v=sp.get(k); return v!==null?v:d;};
+          if(sp.toString().length>0) {
+            this.teamName=S('team',this.teamName); this.logo=S('logo',this.logo); this.iceCost=N('ice',this.iceCost); this.hours=N('hrs',this.hours); this.feePct=N('pct',this.feePct); this.feeFixed=N('fix',this.feeFixed); this.coachCost=N('coach',this.coachCost); this.jerseyCost=N('jersey',this.jerseyCost); this.players=Math.max(1,N('players',this.players)); this.currentPage=S('page','calculator');
+            this._recalc();
+          }
+          this._fromURLOnce=true;
+        }
+        _writeToURL() {
+          const sp=new URLSearchParams();
+          sp.set('team',this.teamName); if(this.logo) sp.set('logo',this.logo); sp.set('ice',String(this.iceCost)); sp.set('hrs',String(this.hours)); sp.set('pct',String(this.feePct)); sp.set('fix',String(this.feeFixed)); sp.set('coach',String(this.coachCost)); sp.set('jersey',String(this.jerseyCost)); sp.set('players',String(this.players)); sp.set('page',String(this.currentPage));
+          window.history.replaceState({},'',`${location.pathname}?${sp.toString()}`);
+        }
+        _recalc() {
+          const base=this.iceCost*this.hours+this.coachCost+this.jerseyCost;
+          const withFees=base*(1+this.feePct)+this.feeFixed;
+          const per=withFees/Math.max(1,this.players);
+          this.totalBase=Number(base.toFixed(2)); this.totalWithFees=Number(withFees.toFixed(2)); this.perPlayer=Number(per.toFixed(2));
+        }
+        _onChange(f,e) {
+          const n=Number(e.detail?.value??0);
+          this[f]=Number.isFinite(n)?n:0;
+        }
+        _copyURL() { navigator.clipboard?.writeText(window.location.href); }
+        _renderPage() {
+          switch(this.currentPage) {
+            case 'summary': return html`<page-summary .teamName=${this.teamName||''} .logo=${this.logo||''} .totalBase=${this.totalBase||0} .totalWithFees=${this.totalWithFees||0} .perPlayer=${this.perPlayer||0} .players=${this.players||1} .iceCost=${this.iceCost||0} .hours=${this.hours||0} .coachCost=${this.coachCost||0} .jerseyCost=${this.jerseyCost||0}></page-summary>`;
+            case 'settings': return html`<page-settings .teamName=${this.teamName||''} .logo=${this.logo||''} .feePct=${this.feePct||0} .feeFixed=${this.feeFixed||0} @team-changed=${(e)=>this.teamName=e.detail} @logo-changed=${(e)=>this.logo=e.detail} @fee-pct-changed=${(e)=>this._onChange('feePct',e)} @fee-fixed-changed=${(e)=>this._onChange('feeFixed',e)}></page-settings>`;
+            default: return html`<page-calculator .teamName=${this.teamName||''} .logo=${this.logo||''} .iceCost=${this.iceCost||0} .hours=${this.hours||0} .coachCost=${this.coachCost||0} .jerseyCost=${this.jerseyCost||0} .players=${this.players||1} .totalBase=${this.totalBase||0} .totalWithFees=${this.totalWithFees||0} .perPlayer=${this.perPlayer||0} @ice-changed=${(e)=>this._onChange('iceCost',e)} @hours-changed=${(e)=>this._onChange('hours',e)} @coach-changed=${(e)=>this._onChange('coachCost',e)} @jersey-changed=${(e)=>this._onChange('jerseyCost',e)} @players-changed=${(e)=>this._onChange('players',e)} @team-changed=${(e)=>this.teamName=e.detail} @logo-changed=${(e)=>this.logo=e.detail} @copy-url=${()=>this._copyURL()}></page-calculator>`;
+          }
+        }
+        static get styles() { return css`:host { display:block; }`; }
+        render() { return html`<div class="app">${this._renderPage()}</div>`; }
+      }
+      customElements.define('ice-planner', IcePlanner);
+    </script>
   </body>
 </html>
